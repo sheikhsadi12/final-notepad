@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { ChatMessage } from "../types";
 
 // Initialize the client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 const SYSTEM_INSTRUCTION = `You are an expert Teacher. You are fluent in English and Bangla. 
 Answer questions clearly, use examples, and provide step-by-step explanations. 
