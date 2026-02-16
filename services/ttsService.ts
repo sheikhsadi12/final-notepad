@@ -1,10 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
 import { VoiceName } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization to prevent crash on module load if process is undefined
+let aiClient: GoogleGenAI | null = null;
+
+const getAiClient = () => {
+  if (!aiClient) {
+    // Safe access to process.env
+    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
+};
 
 // PCM to WAV converter
-// Gemini returns raw PCM 16-bit at 24kHz usually.
 const createWavUrl = (pcmData: Uint8Array, sampleRate: number = 24000): string => {
   const numChannels = 1;
   const byteRate = sampleRate * numChannels * 2; // 16-bit = 2 bytes
@@ -48,8 +57,9 @@ const writeString = (view: DataView, offset: number, string: string) => {
 
 export const fetchTTS = async (text: string, voice: VoiceName): Promise<string | null> => {
   try {
-    // Prepend instruction to text instead of using systemInstruction in config,
-    // as the TTS model endpoint can be sensitive to config structure.
+    const ai = getAiClient();
+
+    // Prepend instruction to text instead of using systemInstruction in config
     const instruction = "Read this naturally as a teacher. Smooth flow between English and Bangla. No robotic pauses. ";
     const fullText = instruction + text;
 
@@ -71,7 +81,6 @@ export const fetchTTS = async (text: string, voice: VoiceName): Promise<string |
 
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
     if (!base64Audio) {
-      // If the model refuses to generate audio or returns text instead (error case handled gracefully)
       console.warn("No audio data returned from Gemini.");
       return null;
     }

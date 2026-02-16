@@ -1,8 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 import { ChatMessage } from "../types";
 
-// Initialize the client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Lazy initialization to prevent crash on module load if process is undefined
+let aiClient: GoogleGenAI | null = null;
+
+const getAiClient = () => {
+  if (!aiClient) {
+    // Safe access to process.env
+    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
+};
 
 const SYSTEM_INSTRUCTION = `You are an expert Teacher. You are fluent in English and Bangla. 
 Answer questions clearly, use examples, and provide step-by-step explanations. 
@@ -17,6 +26,8 @@ export const sendMessageToGemini = async (
   selectedText: string
 ): Promise<string> => {
   try {
+    const ai = getAiClient();
+
     // 1. Construct the Prompt with Context
     let fullPrompt = "";
     
@@ -31,23 +42,14 @@ export const sendMessageToGemini = async (
     fullPrompt += `[USER QUESTION]:\n${currentMessage}`;
 
     // 2. Prepare Contents
-    // We don't send the entire chat history as 'contents' to generateContent in a stateless way usually 
-    // unless we use the ChatSession. For simplicity and context control, we'll use generateContent 
-    // and just append relevant history or rely on the single turn with heavy context for this MVP.
-    // However, to make it "Smart", let's include the last few turns if needed, but for now, 
-    // we'll treat each request as a standalone query enriched with the full Note Context.
-    
     const parts: any[] = [];
     
     if (imageBase64) {
-      // Remove data URL prefix if present for the API call if needed, 
-      // but the SDK usually handles raw base64 data in inlineData.
-      // The format expected is just the base64 string.
       const base64Data = imageBase64.split(',')[1] || imageBase64;
       
       parts.push({
         inlineData: {
-          mimeType: "image/jpeg", // Assuming JPEG/PNG, SDK is flexible
+          mimeType: "image/jpeg",
           data: base64Data
         }
       });
