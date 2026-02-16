@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { VoiceName } from "../types";
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // PCM to WAV converter
 // Gemini returns raw PCM 16-bit at 24kHz usually.
